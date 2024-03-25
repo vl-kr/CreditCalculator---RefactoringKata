@@ -1,7 +1,26 @@
 ﻿namespace CreditCalculator.After;
 
+// Issues:
+// - Move validation logic to a separate class
+// - Create a method to calculate age
+// - Move company and credit check logic to a separate class
+// - Change company type to an enum
+// ...
+
+
 public class CustomerService
 {
+    private readonly CompanyRepository _companyRepository;
+    private readonly CustomerRepository _customerRepository;
+    private readonly CustomerCreditServiceClient _creditService;
+
+    public CustomerService(CompanyRepository companyRepository, CustomerRepository customerRepository, CustomerCreditServiceClient creditService)
+    {
+        _companyRepository = companyRepository;
+        _customerRepository = customerRepository;
+        _creditService = creditService;
+    }
+
     public bool AddCustomer(
         string firstName,
         string lastName,
@@ -9,32 +28,13 @@ public class CustomerService
         DateTime dateOfBirth,
         int companyId)
     {
-        if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
+
+        if (!CustomerValidator.Validate(firstName, lastName, email, dateOfBirth))
         {
             return false;
         }
 
-        if (!email.Contains('@') && !email.Contains('.'))
-        {
-            return false;
-        }
-
-        var now = DateTime.Now;
-        var age = now.Year - dateOfBirth.Year;
-        if (now.Month < dateOfBirth.Month ||
-            now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day)
-        {
-            age--;
-        }
-
-
-        if (age < 21)
-        {
-            return false;
-        }
-
-        var companyRepository = new CompanyRepository();
-        var company = companyRepository.GetById(companyId);
+        var company = _companyRepository.GetById(companyId);
 
         var customer = new Customer
         {
@@ -54,9 +54,8 @@ public class CustomerService
         {
             // Do credit check and double credit limit
             customer.HasCreditLimit = true;
-            var creditService = new CustomerCreditServiceClient();
 
-            var creditLimit = creditService.GetCreditLimit(
+            var creditLimit = _creditService.GetCreditLimit(
                 customer.FirstName,
                 customer.LastName,
                 customer.DateOfBirth);
@@ -68,9 +67,8 @@ public class CustomerService
         {
             // Do credit check
             customer.HasCreditLimit = true;
-            var creditService = new CustomerCreditServiceClient();
 
-            var creditLimit = creditService.GetCreditLimit(
+            var creditLimit = _creditService.GetCreditLimit(
                 customer.FirstName,
                 customer.LastName,
                 customer.DateOfBirth);
@@ -83,8 +81,7 @@ public class CustomerService
             return false;
         }
 
-        var customerRepository = new CustomerRepository();
-        customerRepository.AddCustomer(customer);
+        _customerRepository.AddCustomer(customer);
 
         return true;
     }
