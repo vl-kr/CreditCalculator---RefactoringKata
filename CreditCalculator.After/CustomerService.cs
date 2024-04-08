@@ -45,36 +45,7 @@ public class CustomerService
             LastName = lastName
         };
 
-        if (company.Type == "VeryImportantClient")
-        {
-            // Skip credit check
-            customer.HasCreditLimit = false;
-        }
-        else if (company.Type == "ImportantClient")
-        {
-            // Do credit check and double credit limit
-            customer.HasCreditLimit = true;
-
-            var creditLimit = _creditService.GetCreditLimit(
-                customer.FirstName,
-                customer.LastName,
-                customer.DateOfBirth);
-
-            creditLimit *= 2;
-            customer.CreditLimit = creditLimit;
-        }
-        else
-        {
-            // Do credit check
-            customer.HasCreditLimit = true;
-
-            var creditLimit = _creditService.GetCreditLimit(
-                customer.FirstName,
-                customer.LastName,
-                customer.DateOfBirth);
-
-            customer.CreditLimit = creditLimit;
-        }
+        CreditLimitCalculator.Calculate(company, customer);
 
         if (customer.HasCreditLimit && customer.CreditLimit < 500)
         {
